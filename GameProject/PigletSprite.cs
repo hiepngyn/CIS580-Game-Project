@@ -9,13 +9,23 @@ using Microsoft.Xna.Framework.Graphics;
 
 namespace GameProject
 {
+    /// <summary>
+    /// Handles drawing the pig sprite
+    /// </summary>
     public class PigletSprite : Animal
     {
+        /// <summary>
+        /// Texture and timers for animations
+        /// </summary>
         private Texture2D texture;
         public double directionTimer;
         private double animationTimer;
         private int animationFrame;
 
+        /// <summary>
+        /// Loading 
+        /// </summary>
+        /// <param name="content"></param>
         public override void LoadContent(ContentManager content)
         {
             texture = content.Load<Texture2D>("Animals/Piglet_animation_without_shadow");

@@ -13,9 +13,9 @@ namespace GameProject
     public enum PlayerDirection
     {
         Down = 0,
-        Right = 1,
-        Up = 2,
-        Left = 3
+        Up = 1,
+        Left = 2,
+        Right = 3
     }
     public class PlayerSprite
     {
