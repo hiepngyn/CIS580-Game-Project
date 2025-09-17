@@ -2,7 +2,6 @@
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using static GameProject.Animal;
-
 namespace GameProject
 {
     /// <summary>
@@ -29,26 +28,9 @@ namespace GameProject
         private PlayerSprite player;
 
         /// <summary>
-        /// Tiles of the background layout
-        /// </summary>
-        int[,] animalPaddock = new int[,]
-        {
-            {0,0,0,0,0,0,0,0,0,0,0},
-            {0,0,0,0,0,0,0,0,0,0,0},
-            {0,0,0,0,0,0,0,0,0,0,0},
-            {0,0,0,0,0,0,0,0,0,0,0},
-            {0,0,0,0,0,0,0,0,0,0,0},
-            {0,0,0,0,0,0,0,0,0,0,0},
-            {0,0,0,0,0,0,0,0,0,0,0}
-        };
-
-        /// <summary>
         /// Textures used for background
         /// </summary>
-        private Texture2D grassTile;
-        private Texture2D fenceTile;
-        private Texture2D hillTile;
-        private Texture2D waterTile;
+        private Texture2D _background;
 
         /// <summary>
         /// Constructor
@@ -76,6 +58,10 @@ namespace GameProject
 
             player = new PlayerSprite();
 
+            _graphics.PreferredBackBufferWidth = 1280;
+            _graphics.PreferredBackBufferHeight = 720;
+            _graphics.ApplyChanges();
+
             base.Initialize();
         }
 
@@ -89,13 +75,15 @@ namespace GameProject
             // TODO: use this.Content to load your game content here
             _titleFont = Content.Load<SpriteFont>("TitleFont");
 
-            grassTile = Content.Load<Texture2D>("Background/Grass");
-            fenceTile = Content.Load<Texture2D>("Background/Fences");
-            hillTile = Content.Load<Texture2D>("Background/Hills");
-            waterTile = Content.Load<Texture2D>("Background/Water");
+            _background = Content.Load<Texture2D>("Background/untitled");
+
+            
 
             foreach (var a in animals) { a.LoadContent(Content); }
             player.LoadContent(Content);
+
+            int windowWidth = _graphics.PreferredBackBufferWidth;
+            int windowHeight = _graphics.PreferredBackBufferHeight;
         }
 
         /// <summary>
@@ -127,12 +115,15 @@ namespace GameProject
             GraphicsDevice.Clear(Color.Black);
 
             _spriteBatch.Begin(samplerState: SamplerState.PointClamp);
-            DrawLayout(_spriteBatch, animalPaddock, 64);
+            _spriteBatch.Draw(_background, Vector2.Zero, Color.White);
+
             Vector2 titleSize = _titleFont.MeasureString("Farm Parade");
             Vector2 titlePosition = new Vector2(
                 (_graphics.PreferredBackBufferWidth - titleSize.X) / 2,
                 50
             );
+
+
 
             for (int dx = -2; dx <= 2; dx++)
             {
@@ -152,32 +143,5 @@ namespace GameProject
 
             base.Draw(gameTime);
         }
-
-        /// <summary>
-        /// Used to draw the background of the game
-        /// </summary>
-        /// <param name="spriteBatch">Drawing</param>
-        /// <param name="layout">Array we are using to draw</param>
-        /// <param name="tileSize">Size of the tiles being used</param>
-        private void DrawLayout(SpriteBatch spriteBatch, int[,] layout, int tileSize)
-        {
-            for (int y = 0; y < layout.GetLength(0); y++)
-            {
-                for (int x = 0; x < layout.GetLength(1); x++)
-                {
-                    Texture2D tex = grassTile;
-                    switch (layout[y, x])
-                    {
-                        case 1: tex = fenceTile; break;
-                        case 2: tex = hillTile; break;
-                        case 3: tex = waterTile; break;
-                    }
-
-                    spriteBatch.Draw(tex, new Vector2(x * tileSize, y * tileSize), Color.White);
-                    
-                }
-            }
-        }
-
     }
 }
