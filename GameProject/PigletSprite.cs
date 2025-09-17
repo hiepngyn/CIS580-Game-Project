@@ -21,7 +21,8 @@ namespace GameProject
         public double directionTimer;
         private double animationTimer;
         private int animationFrame;
-
+        public bool IsScared { get; private set; }
+        private double scaredTimer;
         /// <summary>
         /// Loading 
         /// </summary>
@@ -31,45 +32,51 @@ namespace GameProject
             texture = content.Load<Texture2D>("Animals/Piglet_animation_without_shadow");
         }
 
-        public override void Update(GameTime gameTime)
+        public override void Update(GameTime gameTime, int screenWidth, int screenHeight, Vector2 playerPosition)
         {
-            directionTimer += gameTime.ElapsedGameTime.TotalSeconds;
+            double elapsed = gameTime.ElapsedGameTime.TotalSeconds;
+            float speed = 100 * (float)gameTime.ElapsedGameTime.TotalSeconds;
+            float distance = Vector2.Distance(Position, playerPosition);
 
-            if (directionTimer > 2.0)
+            if (distance < 50 && !IsScared)
             {
-                switch (Direction)
-                {
-                    case Direction.Up:
-                        Direction = Direction.Down;
-                        break;
-                    case Direction.Down:
-                        Direction = Direction.Right;
-                        break;
-                    case Direction.Right:
-                        Direction = Direction.Left;
-                        break;
-                    case Direction.Left:
-                        Direction = Direction.Up;
-                        break;
-                }
-                directionTimer -= 2.0;
+                IsScared = true;
+                scaredTimer = 1.5;
+
+                Vector2 diff = Position - playerPosition;
+                if (Math.Abs(diff.X) > Math.Abs(diff.Y))
+                    Direction = diff.X > 0 ? Direction.Right : Direction.Left;
+                else
+                    Direction = diff.Y > 0 ? Direction.Down : Direction.Up;
             }
 
+            if (IsScared)
+            {
+                scaredTimer -= elapsed;
+                if (scaredTimer <= 0) IsScared = false;
+            }
+            else
+            {
+                directionTimer += elapsed;
+                if (directionTimer > 1.0)
+                {
+                    Direction = (Direction)rng.Next(0, 4);
+                    directionTimer = 0;
+                }
+            }
+
+            Vector2 velocity = Vector2.Zero;
             switch (Direction)
             {
-                case Direction.Up:
-                    Position += new Vector2(0, -1) * 100 * (float)gameTime.ElapsedGameTime.TotalSeconds;
-                    break;
-                case Direction.Down:
-                    Position += new Vector2(0, 1) * 100 * (float)gameTime.ElapsedGameTime.TotalSeconds;
-                    break;
-                case Direction.Left:
-                    Position += new Vector2(-1, 0) * 100 * (float)gameTime.ElapsedGameTime.TotalSeconds;
-                    break;
-                case Direction.Right:
-                    Position += new Vector2(1, 0) * 100 * (float)gameTime.ElapsedGameTime.TotalSeconds;
-                    break;
+                case Direction.Up: velocity += new Vector2(0, -1); break;
+                case Direction.Down: velocity += new Vector2(0, 1); break;
+                case Direction.Left: velocity += new Vector2(-1, 0); break;
+                case Direction.Right: velocity += new Vector2(1, 0); break;
             }
+            Position += velocity * speed;
+            int spriteSize = 64;
+            Position.X = MathHelper.Clamp(Position.X, 0, screenWidth - spriteSize);
+            Position.Y = MathHelper.Clamp(Position.Y, 0, screenHeight - spriteSize);
         }
 
         public override void Draw(GameTime gameTime, SpriteBatch spriteBatch)

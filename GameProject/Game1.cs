@@ -32,6 +32,9 @@ namespace GameProject
         /// </summary>
         private Texture2D _background;
 
+        private int windowHeight;
+        private int windowWidth;
+
         /// <summary>
         /// Constructor
         /// </summary>
@@ -82,8 +85,8 @@ namespace GameProject
             foreach (var a in animals) { a.LoadContent(Content); }
             player.LoadContent(Content);
 
-            int windowWidth = _graphics.PreferredBackBufferWidth;
-            int windowHeight = _graphics.PreferredBackBufferHeight;
+            windowWidth = _graphics.PreferredBackBufferWidth;
+            windowHeight = _graphics.PreferredBackBufferHeight;
         }
 
         /// <summary>
@@ -97,7 +100,7 @@ namespace GameProject
 
             // TODO: Add your update logic here
 
-            foreach (var a in animals) {a.Update(gameTime); }
+            foreach (var a in animals) {a.Update(gameTime, windowWidth, windowHeight, player.Position); }
             player.Update(gameTime);
                
             base.Update(gameTime);

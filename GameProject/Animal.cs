@@ -21,8 +21,12 @@ namespace GameProject
     {
         public Vector2 Position;
         public Direction Direction;
+
+        protected static Random rng = new Random();
+
+
         public abstract void LoadContent(ContentManager content);
-        public abstract void Update(GameTime gameTime);
+        public abstract void Update(GameTime gameTime, int screenWidth, int screenHeight, Vector2 player);
         public abstract void Draw(GameTime gameTime, SpriteBatch spriteBatch);
     }
 }
