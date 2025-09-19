@@ -11,7 +11,7 @@ namespace GameProject
     {
         private GraphicsDeviceManager _graphics;
         private SpriteBatch _spriteBatch;
-
+        
         /// <summary>
         /// Used for the title of the game
         /// </summary>
