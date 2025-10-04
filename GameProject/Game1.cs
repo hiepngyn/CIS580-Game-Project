@@ -1,9 +1,18 @@
 ﻿using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Audio;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
+using Microsoft.Xna.Framework.Media;
 using static GameProject.Animal;
 namespace GameProject
 {
+    public enum GameState
+    {
+        TitleScreen,
+        Playing
+    }
+
+
     /// <summary>
     /// Main game
     /// </summary>
@@ -34,7 +43,13 @@ namespace GameProject
 
         private int windowHeight;
         private int windowWidth;
+        private Song backgroundMusic;
+        private SoundEffect scaredSound;
 
+        private GameState currentGameState = GameState.TitleScreen;
+        private Texture2D playButtonTexture;
+        private Rectangle playButtonRect;
+        private MouseState previousMouseState;
         /// <summary>
         /// Constructor
         /// </summary>
@@ -52,12 +67,7 @@ namespace GameProject
         {
             // TODO: Add your initialization logic here
 
-            animals = new Animal[] {
-                new SheepSprite(){ Position = new Vector2(100,100)},
-                new BullSprite(){ Position = new Vector2(200,100)},
-                new RoosterSprite(){ Position = new Vector2(300,100)},
-                new PigletSprite(){ Position = new Vector2(400,100)}
-            };
+
 
             player = new PlayerSprite();
 
@@ -80,13 +90,38 @@ namespace GameProject
 
             _background = Content.Load<Texture2D>("Background/untitled");
 
-            
 
+            playButtonTexture = Content.Load<Texture2D>("UI/PlayButton");
+
+            int buttonWidth = playButtonTexture.Width / 3; 
+            int buttonHeight = playButtonTexture.Height / 3;
+            playButtonRect = new Rectangle(
+                (_graphics.PreferredBackBufferWidth - buttonWidth) / 2,
+                (_graphics.PreferredBackBufferHeight / 2) + 100,
+                buttonWidth,
+                buttonHeight);
+
+            
+            windowWidth = _graphics.PreferredBackBufferWidth;
+            windowHeight = _graphics.PreferredBackBufferHeight;
+
+            _spriteBatch = new SpriteBatch(GraphicsDevice);
+            backgroundMusic = Content.Load<Song>("Sfx/Background_Music");
+            MediaPlayer.IsRepeating = true;
+            MediaPlayer.Volume = 0.1f;
+            MediaPlayer.Play(backgroundMusic);
+
+            scaredSound = Content.Load<SoundEffect>("Sfx/Scared");
+
+            animals = new Animal[] {
+                new SheepSprite(scaredSound){ Position = new Vector2(100,100)},
+                new BullSprite(scaredSound){ Position = new Vector2(200,100)},
+                new RoosterSprite(scaredSound){ Position = new Vector2(300,100)},
+                new PigletSprite(scaredSound){ Position = new Vector2(400,100)}
+            };
             foreach (var a in animals) { a.LoadContent(Content); }
             player.LoadContent(Content);
 
-            windowWidth = _graphics.PreferredBackBufferWidth;
-            windowHeight = _graphics.PreferredBackBufferHeight;
         }
 
         /// <summary>
@@ -95,15 +130,32 @@ namespace GameProject
         /// <param name="gameTime">In game time</param>
         protected override void Update(GameTime gameTime)
         {
-            if (GamePad.GetState(PlayerIndex.One).Buttons.Back == ButtonState.Pressed || Keyboard.GetState().IsKeyDown(Keys.Escape))
-                Exit();
+            var mouseState = Mouse.GetState();
 
-            // TODO: Add your update logic here
+            if (currentGameState == GameState.TitleScreen)
+            {
+                if (mouseState.LeftButton == ButtonState.Pressed &&
+                    previousMouseState.LeftButton == ButtonState.Released &&
+                    playButtonRect.Contains(mouseState.Position))
+                {
+                    currentGameState = GameState.Playing;
+                }
+            }
+            else if (currentGameState == GameState.Playing)
+            {
+                if (GamePad.GetState(PlayerIndex.One).Buttons.Back == ButtonState.Pressed || Keyboard.GetState().IsKeyDown(Keys.Escape))
+                    Exit();
 
-            foreach (var a in animals) {a.Update(gameTime, windowWidth, windowHeight, player.Position); }
-            player.Update(gameTime);
-               
-            base.Update(gameTime);
+                // TODO: Add your update logic here
+
+                foreach (var a in animals) { a.Update(gameTime, windowWidth, windowHeight, player.Position); }
+                player.Update(gameTime);
+
+                base.Update(gameTime);
+            }
+
+            previousMouseState = mouseState;
+
         }
 
         /// <summary>
@@ -112,37 +164,45 @@ namespace GameProject
         /// <param name="gameTime">Ingame time</param>
         protected override void Draw(GameTime gameTime)
         {
-            GraphicsDevice.Clear(Color.CornflowerBlue);
-
-            // TODO: Add your drawing code here
             GraphicsDevice.Clear(Color.Black);
 
             _spriteBatch.Begin(samplerState: SamplerState.PointClamp);
             _spriteBatch.Draw(_background, Vector2.Zero, Color.White);
 
-            Vector2 titleSize = _titleFont.MeasureString("Farm Parade");
-            Vector2 titlePosition = new Vector2(
-                (_graphics.PreferredBackBufferWidth - titleSize.X) / 2,
-                50
-            );
-
-
-
-            for (int dx = -2; dx <= 2; dx++)
+            if (currentGameState == GameState.TitleScreen)
             {
-                for (int dy = -2; dy <= 2; dy++)
+                Vector2 titleSize = _titleFont.MeasureString("Farm Parade");
+                Vector2 titlePosition = new Vector2(
+                    (_graphics.PreferredBackBufferWidth - titleSize.X) / 2,
+                    50
+                );
+
+                for (int dx = -2; dx <= 2; dx++)
                 {
-                    if (dx != 0 || dy != 0)
-                        _spriteBatch.DrawString(_titleFont, "Farm Parade", titlePosition + new Vector2(dx, dy), Color.Black);
+                    for (int dy = -2; dy <= 2; dy++)
+                    {
+                        if (dx != 0 || dy != 0)
+                            _spriteBatch.DrawString(_titleFont, "Farm Parade",
+                                titlePosition + new Vector2(dx, dy), Color.Black);
+                    }
                 }
+                _spriteBatch.DrawString(_titleFont, "Farm Parade", titlePosition, new Color(255, 222, 33));
+
+                Vector2 playButtonPos = new Vector2(
+                    (_graphics.PreferredBackBufferWidth - playButtonTexture.Width) / 2,
+                    250
+                );
+                _spriteBatch.Draw(playButtonTexture, playButtonRect, Color.White);
             }
-            _spriteBatch.DrawString(_titleFont, "Farm Parade", titlePosition, new Color(255, 222, 33));
+            else if (currentGameState == GameState.Playing)
+            {
+                foreach (var a in animals)
+                    a.Draw(gameTime, _spriteBatch);
 
-            foreach (var a in animals) a.Draw(gameTime, _spriteBatch);
+                player.Draw(gameTime, _spriteBatch);
+            }
 
-            player.Draw(gameTime, _spriteBatch);
             _spriteBatch.End();
-
 
             base.Draw(gameTime);
         }

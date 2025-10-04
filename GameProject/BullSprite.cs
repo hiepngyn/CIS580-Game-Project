@@ -7,7 +7,7 @@ using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
 using MonoGame.Extended.Timers;
-
+using Microsoft.Xna.Framework.Audio;
 namespace GameProject
 {
     public class BullSprite : Animal
@@ -18,11 +18,17 @@ namespace GameProject
         private int animationFrame;
         public bool IsScared { get; private set; }
         private double scaredTimer;
+        private SoundEffect scaredSound;
+
         public override void LoadContent(ContentManager content)
         {
             texture = content.Load<Texture2D>("Animals/Bull_animation_without_shadow");
         }
 
+        public BullSprite(SoundEffect scaredSound)
+        {
+            this.scaredSound = scaredSound;
+        }
         public override void Update(GameTime gameTime, int screenWidth, int screenHeight, Vector2 playerPosition)
         {
             double elapsed = gameTime.ElapsedGameTime.TotalSeconds;
@@ -33,6 +39,7 @@ namespace GameProject
             {
                 IsScared = true;
                 scaredTimer = 1.5;
+                scaredSound?.Play();
 
                 Vector2 diff = Position - playerPosition;
                 if (Math.Abs(diff.X) > Math.Abs(diff.Y))

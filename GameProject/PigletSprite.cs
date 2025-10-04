@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
+using Microsoft.Xna.Framework.Audio;
 
 namespace GameProject
 {
@@ -23,6 +24,8 @@ namespace GameProject
         private int animationFrame;
         public bool IsScared { get; private set; }
         private double scaredTimer;
+        private SoundEffect scaredSound;
+
         /// <summary>
         /// Loading 
         /// </summary>
@@ -30,6 +33,11 @@ namespace GameProject
         public override void LoadContent(ContentManager content)
         {
             texture = content.Load<Texture2D>("Animals/Piglet_animation_without_shadow");
+        }
+
+        public PigletSprite(SoundEffect scaredSound)
+        {
+            this.scaredSound = scaredSound;
         }
 
         public override void Update(GameTime gameTime, int screenWidth, int screenHeight, Vector2 playerPosition)
@@ -42,6 +50,7 @@ namespace GameProject
             {
                 IsScared = true;
                 scaredTimer = 1.5;
+                scaredSound?.Play();
 
                 Vector2 diff = Position - playerPosition;
                 if (Math.Abs(diff.X) > Math.Abs(diff.Y))
