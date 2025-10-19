@@ -1,4 +1,5 @@
-﻿using Microsoft.Xna.Framework;
+﻿using System;
+using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Audio;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
@@ -50,6 +51,19 @@ namespace GameProject
         private Texture2D playButtonTexture;
         private Rectangle playButtonRect;
         private MouseState previousMouseState;
+
+        private Random rng = new Random();
+
+        private float titleZoom = 0.1f;
+        private float titleZoomSpeed = 1.2f;
+
+        private float playButtonRotation = 0f;
+        private bool isHoveringPlayButton = false;
+        private float wiggleTimer = 0f;
+
+        private Rectangle[] pens;
+
+
         /// <summary>
         /// Constructor
         /// </summary>
@@ -74,6 +88,14 @@ namespace GameProject
             _graphics.PreferredBackBufferWidth = 1280;
             _graphics.PreferredBackBufferHeight = 720;
             _graphics.ApplyChanges();
+
+            pens = new Rectangle[]
+            {
+                new Rectangle(50, 50, 100, 100),
+                new Rectangle(50, 200, 100, 100),
+                new Rectangle(50, 350, 100, 100),
+                new Rectangle(50, 500, 100, 100)
+            };
 
             base.Initialize();
         }
@@ -114,11 +136,12 @@ namespace GameProject
             scaredSound = Content.Load<SoundEffect>("Sfx/Scared");
 
             animals = new Animal[] {
-                new SheepSprite(scaredSound){ Position = new Vector2(100,100)},
-                new BullSprite(scaredSound){ Position = new Vector2(200,100)},
-                new RoosterSprite(scaredSound){ Position = new Vector2(300,100)},
-                new PigletSprite(scaredSound){ Position = new Vector2(400,100)}
+                new SheepSprite(scaredSound){ Position = new Vector2(rng.Next(400, 801), rng.Next(100, 1001)) },
+                new BullSprite(scaredSound){ Position = new Vector2(rng.Next(400, 801), rng.Next(100, 1001)) },
+                new RoosterSprite(scaredSound){ Position = new Vector2(rng.Next(400, 801), rng.Next(100, 1001)) },
+                new PigletSprite(scaredSound){ Position = new Vector2(rng.Next(400, 801), rng.Next(100, 1001)) }
             };
+
             foreach (var a in animals) { a.LoadContent(Content); }
             player.LoadContent(Content);
 
@@ -134,6 +157,24 @@ namespace GameProject
 
             if (currentGameState == GameState.TitleScreen)
             {
+                if (titleZoom < 1f)
+                    titleZoom += (float)(titleZoomSpeed * gameTime.ElapsedGameTime.TotalSeconds);
+                else
+                    titleZoom = 1f;
+
+                isHoveringPlayButton = playButtonRect.Contains(mouseState.Position);
+
+
+                if (isHoveringPlayButton)
+                {
+                    wiggleTimer += (float)gameTime.ElapsedGameTime.TotalSeconds * 10f;
+                    playButtonRotation = (float)Math.Sin(wiggleTimer) * 0.15f;
+                }
+                else
+                {
+                    playButtonRotation = MathHelper.Lerp(playButtonRotation, 0f, 0.1f);
+                }
+
                 if (mouseState.LeftButton == ButtonState.Pressed &&
                     previousMouseState.LeftButton == ButtonState.Released &&
                     playButtonRect.Contains(mouseState.Position))
@@ -146,7 +187,21 @@ namespace GameProject
                 if (GamePad.GetState(PlayerIndex.One).Buttons.Back == ButtonState.Pressed || Keyboard.GetState().IsKeyDown(Keys.Escape))
                     Exit();
 
-                // TODO: Add your update logic here
+                foreach (var a in animals)
+                {
+                    if (!a.IsInPen)
+                    {
+                        foreach (var pen in pens)
+                        {
+                            if (pen.Contains(a.Position.ToPoint()))
+                            {
+                                a.AssignPen(pen);
+                                break;
+                            }
+                        }
+                    }
+                }
+
 
                 foreach (var a in animals) { a.Update(gameTime, windowWidth, windowHeight, player.Position); }
                 player.Update(gameTime);
@@ -166,34 +221,61 @@ namespace GameProject
         {
             GraphicsDevice.Clear(Color.Black);
 
-            _spriteBatch.Begin(samplerState: SamplerState.PointClamp);
+            _spriteBatch.Begin(samplerState: SamplerState.PointClamp, blendState: BlendState.AlphaBlend);
             _spriteBatch.Draw(_background, Vector2.Zero, Color.White);
+            _spriteBatch.End();
+
+            Matrix transform = Matrix.Identity;
+            if (currentGameState == GameState.TitleScreen)
+            {
+                transform =
+                    Matrix.CreateTranslation(
+                        -_graphics.PreferredBackBufferWidth / 2,
+                        -_graphics.PreferredBackBufferHeight / 2,
+                        0) *
+                    Matrix.CreateScale(titleZoom) *
+                    Matrix.CreateTranslation(
+                        _graphics.PreferredBackBufferWidth / 2,
+                        _graphics.PreferredBackBufferHeight / 2,
+                        0);
+            }
+
+            _spriteBatch.Begin(
+                transformMatrix: transform,
+                samplerState: SamplerState.PointClamp,
+                blendState: BlendState.AlphaBlend
+            );
 
             if (currentGameState == GameState.TitleScreen)
             {
+                // --- Title Text ---
                 Vector2 titleSize = _titleFont.MeasureString("Farm Parade");
                 Vector2 titlePosition = new Vector2(
                     (_graphics.PreferredBackBufferWidth - titleSize.X) / 2,
                     50
                 );
 
+                // black outline
                 for (int dx = -2; dx <= 2; dx++)
                 {
                     for (int dy = -2; dy <= 2; dy++)
                     {
                         if (dx != 0 || dy != 0)
-                            _spriteBatch.DrawString(_titleFont, "Farm Parade",
-                                titlePosition + new Vector2(dx, dy), Color.Black);
+                            _spriteBatch.DrawString(
+                                _titleFont,
+                                "Farm Parade",
+                                titlePosition + new Vector2(dx, dy),
+                                Color.Black
+                            );
                     }
                 }
                 _spriteBatch.DrawString(_titleFont, "Farm Parade", titlePosition, new Color(255, 222, 33));
+                Vector2 playButtonOrigin = new Vector2(playButtonTexture.Width / 2f, playButtonTexture.Height / 2f);
 
-                Vector2 playButtonPos = new Vector2(
-                    (_graphics.PreferredBackBufferWidth - playButtonTexture.Width) / 2,
-                    250
-                );
-                _spriteBatch.Draw(playButtonTexture, playButtonRect, Color.White);
+                Vector2 playButtonCenter = new Vector2(playButtonRect.X + playButtonRect.Width / 2f,playButtonRect.Y + playButtonRect.Height / 2f);
+                _spriteBatch.Draw(playButtonTexture,playButtonCenter,null,Color.White,playButtonRotation,playButtonOrigin,1f,SpriteEffects.None,0f);
             }
+
             else if (currentGameState == GameState.Playing)
             {
                 foreach (var a in animals)

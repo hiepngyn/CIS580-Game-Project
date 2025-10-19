@@ -34,7 +34,9 @@ namespace GameProject
             double elapsed = gameTime.ElapsedGameTime.TotalSeconds;
             float speed = 100 * (float)gameTime.ElapsedGameTime.TotalSeconds;
             float distance = Vector2.Distance(Position, playerPosition);
-            
+
+            if (IsInPen) return;
+
             if (distance < 50 && !IsScared)
             {
                 IsScared = true;
@@ -73,8 +75,19 @@ namespace GameProject
                 }
             Position += velocity * speed;
             int spriteSize = 64;
-            Position.X = MathHelper.Clamp(Position.X, 0, screenWidth - spriteSize);
-            Position.Y = MathHelper.Clamp(Position.Y, 0, screenHeight - spriteSize);
+
+            if (PenBounds != null)
+            {
+                Rectangle pen = PenBounds.Value;
+                Position.X = MathHelper.Clamp(Position.X, pen.Left, pen.Right - spriteSize);
+                Position.Y = MathHelper.Clamp(Position.Y, pen.Top, pen.Bottom - spriteSize);
+            }
+            else
+            {
+                Position.X = MathHelper.Clamp(Position.X, 0, screenWidth - spriteSize);
+                Position.Y = MathHelper.Clamp(Position.Y, 0, screenHeight - spriteSize);
+            }
+
         }
 
         public override void Draw(GameTime gameTime, SpriteBatch spriteBatch)
@@ -89,7 +102,8 @@ namespace GameProject
             }
 
             var source = new Rectangle(animationFrame * 64, (int)Direction * 64, 64, 64);
-            spriteBatch.Draw(texture, Position, source, Color.White);
+            Color drawColor = IsScared ? Color.Lerp(Color.White, Color.Red, 0.5f) * 0.6f : Color.White;
+            spriteBatch.Draw(texture, Position, source, drawColor);
         }
     }
 }

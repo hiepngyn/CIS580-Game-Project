@@ -24,6 +24,14 @@ namespace GameProject
 
         protected static Random rng = new Random();
 
+        public Rectangle? PenBounds { get; private set; } = null;
+        public bool IsInPen => PenBounds != null;
+
+        public void AssignPen(Rectangle pen)
+        {
+            PenBounds = pen;
+        }
+
 
         public abstract void LoadContent(ContentManager content);
         public abstract void Update(GameTime gameTime, int screenWidth, int screenHeight, Vector2 player);
