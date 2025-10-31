@@ -66,6 +66,11 @@ namespace GameProject
 
         private Texture2D dialogTexture;
 
+        private Texture2D menuBoxTexture;
+        private Texture2D startButtonTexture;
+        private Rectangle startButtonRect;
+
+
         /// <summary>
         /// Constructor
         /// </summary>
@@ -112,18 +117,21 @@ namespace GameProject
             // TODO: use this.Content to load your game content here
             _titleFont = Content.Load<SpriteFont>("TitleFont");
             _background = Content.Load<Texture2D>("Background/untitled");
-            playButtonTexture = Content.Load<Texture2D>("UI/PlayButton");
+            menuBoxTexture = Content.Load<Texture2D>("UI/menu");
+            startButtonTexture = Content.Load<Texture2D>("UI/start");
             dialogTexture = Content.Load<Texture2D>("DialogBox/testing");
 
-            int buttonWidth = playButtonTexture.Width / 3; 
-            int buttonHeight = playButtonTexture.Height / 3;
-            playButtonRect = new Rectangle(
-                (_graphics.PreferredBackBufferWidth - buttonWidth) / 2,
-                (_graphics.PreferredBackBufferHeight / 2) + 100,
-                buttonWidth,
-                buttonHeight);
+            Vector2 menuPosition = new Vector2(
+                (_graphics.PreferredBackBufferWidth - menuBoxTexture.Width) / 2,
+                (_graphics.PreferredBackBufferHeight - menuBoxTexture.Height) / 2
+            );
 
-            
+            startButtonRect = new Rectangle(
+                (int)(menuPosition.X + (menuBoxTexture.Width - startButtonTexture.Width) / 2),
+                (int)(menuPosition.Y + (menuBoxTexture.Height - startButtonTexture.Height) / 2),
+                startButtonTexture.Width,
+                startButtonTexture.Height
+            );
             windowWidth = _graphics.PreferredBackBufferWidth;
             windowHeight = _graphics.PreferredBackBufferHeight;
 
@@ -162,8 +170,7 @@ namespace GameProject
                 else
                     titleZoom = 1f;
 
-                isHoveringPlayButton = playButtonRect.Contains(mouseState.Position);
-
+                isHoveringPlayButton = startButtonRect.Contains(mouseState.Position);
 
                 if (isHoveringPlayButton)
                 {
@@ -177,15 +184,18 @@ namespace GameProject
 
                 if (mouseState.LeftButton == ButtonState.Pressed &&
                     previousMouseState.LeftButton == ButtonState.Released &&
-                    playButtonRect.Contains(mouseState.Position))
+                    startButtonRect.Contains(mouseState.Position))
                 {
                     currentGameState = GameState.Dialog;
                 }
+
             }
             else if (currentGameState == GameState.Dialog)
             {
-                if (mouseState.LeftButton == ButtonState.Pressed ||
-                    Keyboard.GetState().IsKeyDown(Keys.Enter))
+                if (mouseState.LeftButton == ButtonState.Pressed &&
+                    previousMouseState.LeftButton == ButtonState.Released ||
+                    (Keyboard.GetState().IsKeyDown(Keys.Enter) &&
+                    !Keyboard.GetState().IsKeyDown(Keys.LeftShift)))
                 {
                     currentGameState = GameState.Playing;
                 }
@@ -254,14 +264,6 @@ namespace GameProject
                 blendState: BlendState.AlphaBlend
             );
 
-            if (currentGameState == GameState.Dialog)
-            {
-                Vector2 dialogPos = new Vector2(
-                    (_graphics.PreferredBackBufferWidth - dialogTexture.Width) / 2,
-                    _graphics.PreferredBackBufferHeight - dialogTexture.Height - 50
-                );
-                _spriteBatch.Draw(dialogTexture, dialogPos, Color.White);
-            }
 
             if (currentGameState == GameState.TitleScreen)
             {
@@ -271,26 +273,50 @@ namespace GameProject
                     50
                 );
 
-                // black outline
                 for (int dx = -2; dx <= 2; dx++)
                 {
                     for (int dy = -2; dy <= 2; dy++)
                     {
                         if (dx != 0 || dy != 0)
-                            _spriteBatch.DrawString(
-                                _titleFont,
-                                "Farm Parade",
-                                titlePosition + new Vector2(dx, dy),
-                                Color.Black
-                            );
+                            _spriteBatch.DrawString(_titleFont, "Farm Parade",
+                                titlePosition + new Vector2(dx, dy), Color.Black);
                     }
                 }
                 _spriteBatch.DrawString(_titleFont, "Farm Parade", titlePosition, new Color(255, 222, 33));
-                Vector2 playButtonOrigin = new Vector2(playButtonTexture.Width / 2f, playButtonTexture.Height / 2f);
 
-                Vector2 playButtonCenter = new Vector2(playButtonRect.X + playButtonRect.Width / 2f,playButtonRect.Y + playButtonRect.Height / 2f);
-                _spriteBatch.Draw(playButtonTexture,playButtonCenter,null,Color.White,playButtonRotation,playButtonOrigin,1f,SpriteEffects.None,0f);
+                Vector2 menuPosition = new Vector2(
+                    (_graphics.PreferredBackBufferWidth - menuBoxTexture.Width) / 2,
+                    (_graphics.PreferredBackBufferHeight - menuBoxTexture.Height) / 2
+                );
+                _spriteBatch.Draw(menuBoxTexture, menuPosition, Color.White);
+
+                Vector2 startCenter = new Vector2(startButtonRect.X + startButtonRect.Width / 2f,
+                                                  startButtonRect.Y + startButtonRect.Height / 2f);
+                Vector2 startOrigin = new Vector2(startButtonTexture.Width / 2f,
+                                                  startButtonTexture.Height / 2f);
+
+                _spriteBatch.Draw(
+                    startButtonTexture,
+                    startCenter,
+                    null,
+                    Color.White,
+                    playButtonRotation,
+                    startOrigin,
+                    1f,
+                    SpriteEffects.None,
+                    0f
+                );
             }
+
+            else if (currentGameState == GameState.Dialog)
+            {
+                Vector2 dialogPos = new Vector2(
+                    (_graphics.PreferredBackBufferWidth - dialogTexture.Width) / 2,
+                    _graphics.PreferredBackBufferHeight - dialogTexture.Height - 50
+                );
+                _spriteBatch.Draw(dialogTexture, dialogPos, Color.White);
+            }
+
 
             else if (currentGameState == GameState.Playing)
             {

@@ -164,7 +164,7 @@
 /processorParam:Quality=Best
 /build:Sfx/Scared.wav
 
-#begin UI/NewPlayButton.png
+#begin UI/menu.png
 /importer:TextureImporter
 /processor:TextureProcessor
 /processorParam:ColorKeyColor=255,0,255,255
@@ -174,9 +174,9 @@
 /processorParam:ResizeToPowerOfTwo=False
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=Color
-/build:UI/NewPlayButton.png
+/build:UI/menu.png
 
-#begin UI/PlayButton.png
+#begin UI/start.png
 /importer:TextureImporter
 /processor:TextureProcessor
 /processorParam:ColorKeyColor=255,0,255,255
@@ -186,5 +186,5 @@
 /processorParam:ResizeToPowerOfTwo=False
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=Color
-/build:UI/PlayButton.png
+/build:UI/start.png
 
