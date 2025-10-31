@@ -10,6 +10,7 @@ namespace GameProject
     public enum GameState
     {
         TitleScreen,
+        Dialog,
         Playing
     }
 
@@ -63,6 +64,7 @@ namespace GameProject
 
         private Rectangle[] pens;
 
+        private Texture2D dialogTexture;
 
         /// <summary>
         /// Constructor
@@ -109,11 +111,9 @@ namespace GameProject
 
             // TODO: use this.Content to load your game content here
             _titleFont = Content.Load<SpriteFont>("TitleFont");
-
             _background = Content.Load<Texture2D>("Background/untitled");
-
-
             playButtonTexture = Content.Load<Texture2D>("UI/PlayButton");
+            dialogTexture = Content.Load<Texture2D>("DialogBox/testing");
 
             int buttonWidth = playButtonTexture.Width / 3; 
             int buttonHeight = playButtonTexture.Height / 3;
@@ -178,6 +178,14 @@ namespace GameProject
                 if (mouseState.LeftButton == ButtonState.Pressed &&
                     previousMouseState.LeftButton == ButtonState.Released &&
                     playButtonRect.Contains(mouseState.Position))
+                {
+                    currentGameState = GameState.Dialog;
+                }
+            }
+            else if (currentGameState == GameState.Dialog)
+            {
+                if (mouseState.LeftButton == ButtonState.Pressed ||
+                    Keyboard.GetState().IsKeyDown(Keys.Enter))
                 {
                     currentGameState = GameState.Playing;
                 }
@@ -246,9 +254,17 @@ namespace GameProject
                 blendState: BlendState.AlphaBlend
             );
 
+            if (currentGameState == GameState.Dialog)
+            {
+                Vector2 dialogPos = new Vector2(
+                    (_graphics.PreferredBackBufferWidth - dialogTexture.Width) / 2,
+                    _graphics.PreferredBackBufferHeight - dialogTexture.Height - 50
+                );
+                _spriteBatch.Draw(dialogTexture, dialogPos, Color.White);
+            }
+
             if (currentGameState == GameState.TitleScreen)
             {
-                // --- Title Text ---
                 Vector2 titleSize = _titleFont.MeasureString("Farm Parade");
                 Vector2 titlePosition = new Vector2(
                     (_graphics.PreferredBackBufferWidth - titleSize.X) / 2,

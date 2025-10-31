@@ -22,3 +22,7 @@
 - **Sfx/Scared.wav**
   - Source: Created by me
   - License: My own work
+
+## Dialog Boxes
+  - Source: Created by me
+  - License: My own work
