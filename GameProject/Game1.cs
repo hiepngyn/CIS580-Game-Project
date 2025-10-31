@@ -5,13 +5,16 @@ using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using Microsoft.Xna.Framework.Media;
 using static GameProject.Animal;
+using System.IO;
+using System.Text.Json;
+
 namespace GameProject
 {
     public enum GameState
     {
         TitleScreen,
         Dialog,
-        Playing
+        LevelOne
     }
 
 
@@ -161,6 +164,13 @@ namespace GameProject
         /// <param name="gameTime">In game time</param>
         protected override void Update(GameTime gameTime)
         {
+            if (Keyboard.GetState().IsKeyDown(Keys.F5))
+                SaveGame();
+
+            if (Keyboard.GetState().IsKeyDown(Keys.F9))
+                LoadGame();
+
+
             var mouseState = Mouse.GetState();
 
             if (currentGameState == GameState.TitleScreen)
@@ -197,10 +207,10 @@ namespace GameProject
                     (Keyboard.GetState().IsKeyDown(Keys.Enter) &&
                     !Keyboard.GetState().IsKeyDown(Keys.LeftShift)))
                 {
-                    currentGameState = GameState.Playing;
+                    currentGameState = GameState.LevelOne;
                 }
             }
-            else if (currentGameState == GameState.Playing)
+            else if (currentGameState == GameState.LevelOne)
             {
                 if (GamePad.GetState(PlayerIndex.One).Buttons.Back == ButtonState.Pressed || Keyboard.GetState().IsKeyDown(Keys.Escape))
                     Exit();
@@ -318,7 +328,7 @@ namespace GameProject
             }
 
 
-            else if (currentGameState == GameState.Playing)
+            else if (currentGameState == GameState.LevelOne)
             {
                 foreach (var a in animals)
                     a.Draw(gameTime, _spriteBatch);
@@ -329,6 +339,72 @@ namespace GameProject
             _spriteBatch.End();
 
             base.Draw(gameTime);
+        }
+
+        private const string SaveFilePath = "savegame.json";
+
+        private void SaveGame()
+        {
+            var saveData = new SaveData
+            {
+                PlayerPosition = player.Position,
+                CurrentLevel = currentGameState.ToString()
+            };
+
+            foreach (var a in animals)
+            {
+                saveData.Animals.Add(new AnimalData
+                {
+                    Type = a.GetType().Name,
+                    Position = a.Position,
+                    IsInPen = a.IsInPen
+                });
+            }
+
+            string json = JsonSerializer.Serialize(saveData, new JsonSerializerOptions { WriteIndented = true });
+            File.WriteAllText(SaveFilePath, json);
+        }
+
+        private void LoadGame()
+        {
+            if (!File.Exists(SaveFilePath))
+                return;
+
+            string json = File.ReadAllText(SaveFilePath);
+            var saveData = JsonSerializer.Deserialize<SaveData>(json);
+
+            // Restore player
+            player.Position = saveData.PlayerPosition;
+
+            // Restore animals
+            animals = new Animal[saveData.Animals.Count];
+            for (int i = 0; i < saveData.Animals.Count; i++)
+            {
+                var ad = saveData.Animals[i];
+                SoundEffect sfx = scaredSound;
+                Animal animal = ad.Type switch
+                {
+                    "SheepSprite" => new SheepSprite(sfx),
+                    "BullSprite" => new BullSprite(sfx),
+                    "RoosterSprite" => new RoosterSprite(sfx),
+                    "PigletSprite" => new PigletSprite(sfx),
+                    _ => null
+                };
+                if (animal != null)
+                {
+                    animal.Position = ad.Position;
+                    if (ad.IsInPen)
+                    {
+                        animal.AssignPen(new Rectangle((int)ad.Position.X, (int)ad.Position.Y, 100, 100));
+                    }
+                    animals[i] = animal;
+                }
+            }
+
+            foreach (var a in animals)
+                a.LoadContent(Content);
+
+            currentGameState = Enum.Parse<GameState>(saveData.CurrentLevel);
         }
     }
 }
