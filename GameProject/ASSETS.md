@@ -23,6 +23,6 @@
   - Source: Created by me
   - License: My own work
 
-## Dialog Boxes
+## Pixel Art
   - Source: Created by me
   - License: My own work
