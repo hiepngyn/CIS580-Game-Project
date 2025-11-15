@@ -164,6 +164,12 @@
 /processorParam:Quality=Best
 /build:Sfx/Scared.wav
 
+#begin Sfx/TheSound.wav
+/importer:WavImporter
+/processor:SoundEffectProcessor
+/processorParam:Quality=Best
+/build:Sfx/TheSound.wav
+
 #begin UI/menu.png
 /importer:TextureImporter
 /processor:TextureProcessor
@@ -175,6 +181,18 @@
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=Color
 /build:UI/menu.png
+
+#begin UI/star.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:UI/star.png
 
 #begin UI/start.png
 /importer:TextureImporter

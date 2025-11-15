@@ -7,6 +7,7 @@ using Microsoft.Xna.Framework.Media;
 using static GameProject.Animal;
 using System.IO;
 using System.Text.Json;
+///using SharpDX.Direct2D1;
 
 namespace GameProject
 {
@@ -73,6 +74,17 @@ namespace GameProject
         private Texture2D startButtonTexture;
         private Rectangle startButtonRect;
 
+        private Vector2 menuPosition;
+        private float menuScale = 0.6f;
+
+        _3D theShape;
+        private Texture2D starTexture;
+        private Vector2 starPosition;
+        private float starScale = 0.6f;
+        private Rectangle cubeViewportRect;
+
+        private SoundEffect cubeClickSound;
+
 
         /// <summary>
         /// Constructor
@@ -123,17 +135,32 @@ namespace GameProject
             menuBoxTexture = Content.Load<Texture2D>("UI/menu");
             startButtonTexture = Content.Load<Texture2D>("UI/start");
             dialogTexture = Content.Load<Texture2D>("DialogBox/testing");
+            starTexture = Content.Load<Texture2D>("UI/star");
+            cubeClickSound = Content.Load<SoundEffect>("Sfx/TheSound");
 
-            Vector2 menuPosition = new Vector2(
-                (_graphics.PreferredBackBufferWidth - menuBoxTexture.Width) / 2,
-                (_graphics.PreferredBackBufferHeight - menuBoxTexture.Height) / 2
+            theShape = new _3D(this);
+            starPosition = new Vector2(150, 200); 
+
+            int scaledStarWidth = (int)(starTexture.Width * starScale);
+            int scaledStarHeight = (int)(starTexture.Height * starScale);
+
+            cubeViewportRect = new Rectangle(
+                (int)(starPosition.X + scaledStarWidth * 0.23f),
+                (int)(starPosition.Y + scaledStarHeight * 0.23f),
+                (int)(scaledStarWidth * 0.55f),
+                (int)(scaledStarHeight * 0.55f)
+            );
+
+            menuPosition = new Vector2(
+                _graphics.PreferredBackBufferWidth * 0.7f - (menuBoxTexture.Width * menuScale) / 2f,
+                (_graphics.PreferredBackBufferHeight - menuBoxTexture.Height * menuScale) / 2f
             );
 
             startButtonRect = new Rectangle(
-                (int)(menuPosition.X + (menuBoxTexture.Width - startButtonTexture.Width) / 2),
-                (int)(menuPosition.Y + (menuBoxTexture.Height - startButtonTexture.Height) / 2),
-                startButtonTexture.Width,
-                startButtonTexture.Height
+                (int)(menuPosition.X + (menuBoxTexture.Width * menuScale - startButtonTexture.Width * menuScale) / 2f),
+                (int)(menuPosition.Y + (menuBoxTexture.Height * menuScale - startButtonTexture.Height * menuScale) / 2f),
+                (int)(startButtonTexture.Width * menuScale),
+                (int)(startButtonTexture.Height * menuScale)
             );
             windowWidth = _graphics.PreferredBackBufferWidth;
             windowHeight = _graphics.PreferredBackBufferHeight;
@@ -175,22 +202,14 @@ namespace GameProject
 
             if (currentGameState == GameState.TitleScreen)
             {
+                theShape.Update(gameTime);
+
                 if (titleZoom < 1f)
                     titleZoom += (float)(titleZoomSpeed * gameTime.ElapsedGameTime.TotalSeconds);
                 else
                     titleZoom = 1f;
 
                 isHoveringPlayButton = startButtonRect.Contains(mouseState.Position);
-
-                if (isHoveringPlayButton)
-                {
-                    wiggleTimer += (float)gameTime.ElapsedGameTime.TotalSeconds * 10f;
-                    playButtonRotation = (float)Math.Sin(wiggleTimer) * 0.15f;
-                }
-                else
-                {
-                    playButtonRotation = MathHelper.Lerp(playButtonRotation, 0f, 0.1f);
-                }
 
                 if (mouseState.LeftButton == ButtonState.Pressed &&
                     previousMouseState.LeftButton == ButtonState.Released &&
@@ -199,6 +218,22 @@ namespace GameProject
                     currentGameState = GameState.Dialog;
                 }
 
+                if (mouseState.LeftButton == ButtonState.Pressed && previousMouseState.LeftButton == ButtonState.Released)
+                {
+                    float scale = titleZoom;
+
+                    Rectangle scaledCubeRect = new Rectangle(
+                        (int)(cubeViewportRect.X * scale),
+                        (int)(cubeViewportRect.Y * scale),
+                        (int)(cubeViewportRect.Width * scale),
+                        (int)(cubeViewportRect.Height * scale)
+                    );
+
+                    if (scaledCubeRect.Contains(mouseState.Position))
+                    {
+                        cubeClickSound.Play();
+                    }
+                }
             }
             else if (currentGameState == GameState.Dialog)
             {
@@ -249,11 +284,13 @@ namespace GameProject
         {
             GraphicsDevice.Clear(Color.Black);
 
+            // Draw background
             _spriteBatch.Begin(samplerState: SamplerState.PointClamp, blendState: BlendState.AlphaBlend);
             _spriteBatch.Draw(_background, Vector2.Zero, Color.White);
             _spriteBatch.End();
 
             Matrix transform = Matrix.Identity;
+
             if (currentGameState == GameState.TitleScreen)
             {
                 transform =
@@ -266,6 +303,33 @@ namespace GameProject
                         _graphics.PreferredBackBufferWidth / 2,
                         _graphics.PreferredBackBufferHeight / 2,
                         0);
+
+                _spriteBatch.Begin(transformMatrix: transform);
+                _spriteBatch.Draw(
+                    starTexture,
+                    starPosition,
+                    null,
+                    Color.White,
+                    0f,
+                    Vector2.Zero,
+                    starScale,
+                    SpriteEffects.None,
+                    0f
+                );
+                _spriteBatch.End();
+
+                var oldViewport = GraphicsDevice.Viewport;
+
+                GraphicsDevice.Viewport = new Viewport(
+                    cubeViewportRect.X,
+                    cubeViewportRect.Y,
+                    cubeViewportRect.Width,
+                    cubeViewportRect.Height
+                );
+
+                GraphicsDevice.DepthStencilState = DepthStencilState.Default;
+                theShape.Draw();
+                GraphicsDevice.Viewport = oldViewport;
             }
 
             _spriteBatch.Begin(
@@ -273,7 +337,6 @@ namespace GameProject
                 samplerState: SamplerState.PointClamp,
                 blendState: BlendState.AlphaBlend
             );
-
 
             if (currentGameState == GameState.TitleScreen)
             {
@@ -292,18 +355,35 @@ namespace GameProject
                                 titlePosition + new Vector2(dx, dy), Color.Black);
                     }
                 }
-                _spriteBatch.DrawString(_titleFont, "Farm Parade", titlePosition, new Color(255, 222, 33));
 
-                Vector2 menuPosition = new Vector2(
-                    (_graphics.PreferredBackBufferWidth - menuBoxTexture.Width) / 2,
-                    (_graphics.PreferredBackBufferHeight - menuBoxTexture.Height) / 2
+                _spriteBatch.DrawString(
+                    _titleFont,
+                    "Farm Parade",
+                    titlePosition,
+                    Color.Yellow
                 );
-                _spriteBatch.Draw(menuBoxTexture, menuPosition, Color.White);
 
-                Vector2 startCenter = new Vector2(startButtonRect.X + startButtonRect.Width / 2f,
-                                                  startButtonRect.Y + startButtonRect.Height / 2f);
-                Vector2 startOrigin = new Vector2(startButtonTexture.Width / 2f,
-                                                  startButtonTexture.Height / 2f);
+
+                _spriteBatch.Draw(
+                    menuBoxTexture,
+                    menuPosition,
+                    null,
+                    Color.White,
+                    0f,
+                    Vector2.Zero,
+                    menuScale,
+                    SpriteEffects.None,
+                    0f
+                );
+
+                Vector2 startCenter = new Vector2(
+                    startButtonRect.X + startButtonRect.Width / 2f,
+                    startButtonRect.Y + startButtonRect.Height / 2f
+                );
+                Vector2 startOrigin = new Vector2(
+                    startButtonTexture.Width / 2f,
+                    startButtonTexture.Height / 2f
+                );
 
                 _spriteBatch.Draw(
                     startButtonTexture,
@@ -312,12 +392,11 @@ namespace GameProject
                     Color.White,
                     playButtonRotation,
                     startOrigin,
-                    1f,
+                    menuScale,
                     SpriteEffects.None,
                     0f
                 );
             }
-
             else if (currentGameState == GameState.Dialog)
             {
                 Vector2 dialogPos = new Vector2(
@@ -326,8 +405,6 @@ namespace GameProject
                 );
                 _spriteBatch.Draw(dialogTexture, dialogPos, Color.White);
             }
-
-
             else if (currentGameState == GameState.LevelOne)
             {
                 foreach (var a in animals)
