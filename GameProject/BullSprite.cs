@@ -13,12 +13,10 @@ namespace GameProject
     public class BullSprite : Animal
     {
         private Texture2D texture;
-        public double directionTimer;
         private double animationTimer;
         private int animationFrame;
-        public bool IsScared { get; private set; }
-        private double scaredTimer;
         private SoundEffect scaredSound;
+        private bool wasScared = false;
 
         public override void LoadContent(ContentManager content)
         {
@@ -29,53 +27,73 @@ namespace GameProject
         {
             this.scaredSound = scaredSound;
         }
+
         public override void Update(GameTime gameTime, int screenWidth, int screenHeight, Vector2 playerPosition)
         {
-            double elapsed = gameTime.ElapsedGameTime.TotalSeconds;
-            float speed = 100 * (float)gameTime.ElapsedGameTime.TotalSeconds;
-            float distance = Vector2.Distance(Position, playerPosition);
-
             if (IsInPen) return;
 
-            if (distance < 50 && !IsScared)
-            {
-                IsScared = true;
-                scaredTimer = 1.5;
-                scaredSound?.Play();
+            float dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
 
-                Vector2 diff = Position - playerPosition;
-                if (Math.Abs(diff.X) > Math.Abs(diff.Y))
-                    Direction = diff.X > 0 ? Direction.Right : Direction.Left;
-                else
-                    Direction = diff.Y > 0 ? Direction.Down : Direction.Up;
-            }
+            // Calculate desired movement direction using potential field
+            Vector2 desiredDirection = CalculateFleeDirection(playerPosition, screenWidth, screenHeight);
 
+            // If scared, accelerate in desired direction
             if (IsScared)
             {
-                scaredTimer -= elapsed;
-                if (scaredTimer <= 0) IsScared = false;
+                // Play sound when first scared
+                if (!wasScared)
+                {
+                    scaredSound?.Play();
+                    wasScared = true;
+                }
+
+                // Accelerate toward desired direction
+                if (desiredDirection.Length() > 0)
+                {
+                    desiredDirection.Normalize();
+                    velocity += desiredDirection * ACCELERATION * dt;
+
+                    // Limit to max speed
+                    if (velocity.Length() > MAX_SPEED)
+                    {
+                        velocity.Normalize();
+                        velocity *= MAX_SPEED;
+                    }
+                }
             }
             else
             {
-                directionTimer += elapsed;
-                if (directionTimer > 1.0)
+                wasScared = false;
+
+                // Idle wandering behavior
+                idleTimer += dt;
+                if (idleTimer > 1.5) // Change direction every 1.5 seconds
                 {
-                    Direction = (Direction)rng.Next(0, 4);
-                    directionTimer = 0;
+                    // Random direction for idle movement
+                    Vector2 randomDir = new Vector2(
+                        (float)(rng.NextDouble() - 0.5),
+                        (float)(rng.NextDouble() - 0.5)
+                    );
+                    if (randomDir.Length() > 0)
+                    {
+                        randomDir.Normalize();
+                        velocity = randomDir * IDLE_SPEED;
+                    }
+                    idleTimer = 0;
                 }
+
+                // Gradual slowdown
+                velocity *= 0.98f;
             }
 
-            Vector2 velocity = Vector2.Zero;
-                switch (Direction)
-                {
-                    case Direction.Up: velocity += new Vector2(0, -1);  break;
-                    case Direction.Down: velocity += new Vector2(0, 1); break;
-                    case Direction.Left: velocity += new Vector2(-1, 0); break;
-                    case Direction.Right: velocity += new Vector2(1, 0); break;
-                }
-            Position += velocity * speed;
-            int spriteSize = 64;
+            // Update position
+            Position += velocity * dt;
 
+            // Update facing direction
+            UpdateDirection();
+
+            // Keep in bounds
+            int spriteSize = 64; // Bull sprite is 64x64
             if (PenBounds != null)
             {
                 Rectangle pen = PenBounds.Value;
@@ -88,6 +106,11 @@ namespace GameProject
                 Position.Y = MathHelper.Clamp(Position.Y, 0, screenHeight - spriteSize);
             }
 
+            // Stop velocity if hit wall
+            if (Position.X <= 0 || Position.X >= screenWidth - spriteSize)
+                velocity.X = 0;
+            if (Position.Y <= 0 || Position.Y >= screenHeight - spriteSize)
+                velocity.Y = 0;
         }
 
         public override void Draw(GameTime gameTime, SpriteBatch spriteBatch)

@@ -14,6 +14,7 @@ namespace GameProject
         public Vector2 PlayerPosition { get;set; }
         public List<AnimalData> Animals { get; set; } = new List<AnimalData>();
         public string CurrentLevel { get; set; }
+        public int LevelNumber { get; set; }
     }
 
     [Serializable]
