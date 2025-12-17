@@ -40,15 +40,38 @@ namespace GameProject
 
         public override void Update(GameTime gameTime, int screenWidth, int screenHeight, Vector2 playerPosition)
         {
-            if (IsInPen) return;
-
             float dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
 
             // Calculate desired movement direction using potential field
             Vector2 desiredDirection = CalculateFleeDirection(playerPosition, screenWidth, screenHeight);
 
+            // If in pen, only do idle wandering (no fleeing)
+            if (IsInPen)
+            {
+                wasScared = false;
+
+                // Idle wandering behavior
+                idleTimer += dt;
+                if (idleTimer > 1.5) // Change direction every 1.5 seconds
+                {
+                    // Random direction for idle movement
+                    Vector2 randomDir = new Vector2(
+                        (float)(rng.NextDouble() - 0.5),
+                        (float)(rng.NextDouble() - 0.5)
+                    );
+                    if (randomDir.Length() > 0)
+                    {
+                        randomDir.Normalize();
+                        velocity = randomDir * IDLE_SPEED * 0.5f; // Slower in pen
+                    }
+                    idleTimer = 0;
+                }
+
+                // Gradual slowdown
+                velocity *= 0.95f;
+            }
             // If scared, accelerate in desired direction
-            if (IsScared)
+            else if (IsScared)
             {
                 // Play sound when first scared
                 if (!wasScared)

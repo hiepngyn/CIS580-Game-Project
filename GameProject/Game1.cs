@@ -18,7 +18,8 @@ namespace GameProject
         TitleScreen,
         Dialog,
         Playing,
-        Victory
+        Victory,
+        GameOver
     }
 
 
@@ -71,6 +72,9 @@ namespace GameProject
 
         private int currentLevel = 1;
         private const int MAX_LEVELS = 3;
+
+        private float gameTimer = 99f; // Countdown timer starting at 99 seconds
+        private Rectangle gameOverButtonRect;
 
         private Texture2D dialogTexture;
         private Texture2D victoryButtonTexture;
@@ -255,43 +259,63 @@ namespace GameProject
                 if (Keyboard.GetState().IsKeyDown(Keys.Escape))
                     Exit();
 
-                // Check if animals enter pens and validate pen compatibility
-                foreach (var a in animals)
+                // Update countdown timer
+                gameTimer -= (float)gameTime.ElapsedGameTime.TotalSeconds;
+
+                // Check if time ran out
+                if (gameTimer <= 0)
                 {
-                    if (!a.IsInPen)
-                    {
-                        for (int i = 0; i < pens.Length; i++)
-                        {
-                            if (pens[i].Contains(a.Position.ToPoint()))
-                            {
-                                // Only assign to pen if it can accept this animal type
-                                if (CanPenAcceptAnimal(i, a))
-                                {
-                                    a.AssignPen(pens[i]);
-                                    penAnimalTypes[i] = a.GetType();
-                                }
-                                break;
-                            }
-                        }
-                    }
-                }
+                    gameTimer = 0;
+                    currentGameState = GameState.GameOver;
 
-                // Update animals and player
-                foreach (var a in animals) { a.Update(gameTime, windowWidth, windowHeight, player.Position); }
-                player.Update(gameTime);
-
-                // Check for level completion
-                if (IsLevelComplete())
-                {
-                    currentGameState = GameState.Victory;
-
-                    // Set up victory button
-                    victoryButtonRect = new Rectangle(
+                    // Set up game over button
+                    gameOverButtonRect = new Rectangle(
                         windowWidth / 2 - 100,
                         windowHeight / 2 + 50,
                         200,
                         60
                     );
+                }
+                else
+                {
+                    // Check if animals enter pens and validate pen compatibility
+                    foreach (var a in animals)
+                    {
+                        if (!a.IsInPen)
+                        {
+                            for (int i = 0; i < pens.Length; i++)
+                            {
+                                if (pens[i].Contains(a.Position.ToPoint()))
+                                {
+                                    // Only assign to pen if it can accept this animal type
+                                    if (CanPenAcceptAnimal(i, a))
+                                    {
+                                        a.AssignPen(pens[i]);
+                                        penAnimalTypes[i] = a.GetType();
+                                    }
+                                    break;
+                                }
+                            }
+                        }
+                    }
+
+                    // Update animals and player
+                    foreach (var a in animals) { a.Update(gameTime, windowWidth, windowHeight, player.Position); }
+                    player.Update(gameTime);
+
+                    // Check for level completion
+                    if (IsLevelComplete())
+                    {
+                        currentGameState = GameState.Victory;
+
+                        // Set up victory button
+                        victoryButtonRect = new Rectangle(
+                            windowWidth / 2 - 100,
+                            windowHeight / 2 + 50,
+                            200,
+                            60
+                        );
+                    }
                 }
 
                 base.Update(gameTime);
@@ -313,6 +337,42 @@ namespace GameProject
                     else
                     {
                         // Last level - return to menu
+                        currentLevel = 1;
+                        currentGameState = GameState.TitleScreen;
+                    }
+                }
+            }
+            else if (currentGameState == GameState.GameOver)
+            {
+                // Handle game over button clicks
+                if (mouseState.LeftButton == ButtonState.Pressed &&
+                    previousMouseState.LeftButton == ButtonState.Released)
+                {
+                    // Check for "Play Again" button (top button)
+                    Rectangle playAgainRect = new Rectangle(
+                        windowWidth / 2 - 100,
+                        windowHeight / 2,
+                        200,
+                        50
+                    );
+
+                    // Check for "Return to Menu" button (bottom button)
+                    Rectangle menuRect = new Rectangle(
+                        windowWidth / 2 - 100,
+                        windowHeight / 2 + 60,
+                        200,
+                        50
+                    );
+
+                    if (playAgainRect.Contains(mouseState.Position))
+                    {
+                        // Restart current level
+                        currentGameState = GameState.Playing;
+                        InitializeLevel(currentLevel);
+                    }
+                    else if (menuRect.Contains(mouseState.Position))
+                    {
+                        // Return to title screen
                         currentLevel = 1;
                         currentGameState = GameState.TitleScreen;
                     }
@@ -468,6 +528,18 @@ namespace GameProject
                 Vector2 levelTextPos = new Vector2(windowWidth - levelTextSize.X - 20, 10);
                 _spriteBatch.DrawString(_titleFont, levelText, levelTextPos + new Vector2(2, 2), Color.Black);
                 _spriteBatch.DrawString(_titleFont, levelText, levelTextPos, Color.Yellow);
+
+                // Draw countdown timer
+                int seconds = (int)Math.Ceiling(gameTimer);
+                string timerText = $"Time: {seconds:00}";
+                Vector2 timerTextSize = _titleFont.MeasureString(timerText);
+                Vector2 timerTextPos = new Vector2((windowWidth - timerTextSize.X) / 2, 10);
+
+                // Change color based on time remaining
+                Color timerColor = gameTimer > 10 ? Color.White : Color.Red;
+
+                _spriteBatch.DrawString(_titleFont, timerText, timerTextPos + new Vector2(2, 2), Color.Black);
+                _spriteBatch.DrawString(_titleFont, timerText, timerTextPos, timerColor);
             }
             else if (currentGameState == GameState.Victory)
             {
@@ -526,6 +598,90 @@ namespace GameProject
                     blendState: BlendState.AlphaBlend
                 );
             }
+            else if (currentGameState == GameState.GameOver)
+            {
+                // Draw the playing field with animals
+                if (animals != null)
+                {
+                    foreach (var a in animals)
+                        a.Draw(gameTime, _spriteBatch);
+                }
+                player.Draw(gameTime, _spriteBatch);
+
+                _spriteBatch.End();
+
+                // Draw semi-transparent overlay
+                _spriteBatch.Begin(blendState: BlendState.AlphaBlend);
+                Texture2D overlay = CreateSolidTexture(GraphicsDevice, windowWidth, windowHeight, Color.Black);
+                _spriteBatch.Draw(overlay, Vector2.Zero, Color.White * 0.7f);
+
+                // Draw game over text
+                string gameOverText = "TIME'S UP!";
+                Vector2 gameOverTextSize = _titleFont.MeasureString(gameOverText);
+                Vector2 gameOverTextPos = new Vector2(
+                    (windowWidth - gameOverTextSize.X) / 2,
+                    windowHeight / 2 - 120
+                );
+
+                // Draw text shadow
+                _spriteBatch.DrawString(_titleFont, gameOverText, gameOverTextPos + new Vector2(3, 3), Color.Black);
+                _spriteBatch.DrawString(_titleFont, gameOverText, gameOverTextPos, Color.Red);
+
+                _spriteBatch.End();
+
+                // Draw buttons
+                _spriteBatch.Begin(blendState: BlendState.AlphaBlend);
+
+                // Define button rectangles
+                Rectangle playAgainRect = new Rectangle(
+                    windowWidth / 2 - 100,
+                    windowHeight / 2,
+                    200,
+                    50
+                );
+
+                Rectangle menuRect = new Rectangle(
+                    windowWidth / 2 - 100,
+                    windowHeight / 2 + 60,
+                    200,
+                    50
+                );
+
+                // Draw "Play Again" button
+                Texture2D playAgainBg = CreateSolidTexture(GraphicsDevice, playAgainRect.Width, playAgainRect.Height, Color.White);
+                _spriteBatch.Draw(playAgainBg, playAgainRect, Color.Orange * 0.8f);
+
+                string playAgainText = "Play Again";
+                Vector2 playAgainTextSize = _titleFont.MeasureString(playAgainText);
+                Vector2 playAgainTextPos = new Vector2(
+                    playAgainRect.X + (playAgainRect.Width - playAgainTextSize.X) / 2,
+                    playAgainRect.Y + (playAgainRect.Height - playAgainTextSize.Y) / 2
+                );
+                _spriteBatch.DrawString(_titleFont, playAgainText, playAgainTextPos + new Vector2(2, 2), Color.Black);
+                _spriteBatch.DrawString(_titleFont, playAgainText, playAgainTextPos, Color.White);
+
+                // Draw "Return to Menu" button
+                Texture2D menuBg = CreateSolidTexture(GraphicsDevice, menuRect.Width, menuRect.Height, Color.White);
+                _spriteBatch.Draw(menuBg, menuRect, Color.Gray * 0.8f);
+
+                string menuText = "Return to Menu";
+                Vector2 menuTextSize = _titleFont.MeasureString(menuText);
+                Vector2 menuTextPos = new Vector2(
+                    menuRect.X + (menuRect.Width - menuTextSize.X) / 2,
+                    menuRect.Y + (menuRect.Height - menuTextSize.Y) / 2
+                );
+                _spriteBatch.DrawString(_titleFont, menuText, menuTextPos + new Vector2(2, 2), Color.Black);
+                _spriteBatch.DrawString(_titleFont, menuText, menuTextPos, Color.White);
+
+                _spriteBatch.End();
+
+                // Restart the main sprite batch for the remaining code
+                _spriteBatch.Begin(
+                    transformMatrix: transform,
+                    samplerState: SamplerState.PointClamp,
+                    blendState: BlendState.AlphaBlend
+                );
+            }
 
 
             _spriteBatch.End();
@@ -539,6 +695,9 @@ namespace GameProject
         private void InitializeLevel(int level)
         {
             currentLevel = level;
+
+            // Reset game timer to 99 seconds
+            gameTimer = 99f;
 
             // Reset pen animal types
             for (int i = 0; i < penAnimalTypes.Length; i++)
